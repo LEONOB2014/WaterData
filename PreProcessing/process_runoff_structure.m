@@ -1,0 +1,133 @@
+function st_runoff = process_runoff_structure(dir_catch,st_params)
+
+% PROCESS_RUNOFF_STRUCTURE(dir_catch) creates a runoff data structure and
+% saves it in dir_catch
+%
+% INPUTS
+% dir_catch = absolute path to catchment directory
+% st_params = structure with calculatin parameters such as wy_month1 and
+%             wy_day1
+%
+% OUTPUTS
+% st_runoff = structure with runoff data 
+%
+% TC Moran UC Berkeley 2012
+
+%% INITIALIZE
+if nargin < 1, dir_catch = uigetdir; end
+if nargin < 2 % default to Oct-Sep water year
+    wy_month1 = 10;
+    st_params.wy_month1 = wy_month1;
+    st_params.wy_day1 = firstdayofmonth(wy_month1);
+end
+dir_orig = cd(dir_catch);
+
+% define and create runoff directory
+dir_runoff_name = 'GAGE_RUNOFF';
+dir_runoff = fullfile(dir_catch,dir_runoff_name);
+if ~isdir(dir_runoff)
+    mkdir(dir_runoff);
+    % CHECK IF RUNOFF CALCS ALREADY DONE
+else
+    chk_runoff_st = isfilename('ST_USGS_RUNOFF.mat',dir_runoff);
+    chk_runoff_plot = isfilename('Discharge_Intensity_YearDay.fig',dir_runoff);
+    if chk_runoff_st && chk_runoff_plot
+       cd(dir_runoff)
+       load('ST_USGS_RUNOFF.mat')
+       cd(dir_orig)
+       return
+    end
+end
+
+%% LOAD CATCHMENT INFO
+st_catch = import_site_info('site_info.csv');
+site_id = st_catch.site_id;
+site_name = st_catch.site_name
+
+%% RETRIEVE DISCHARGE DATA FOR THIS USGS GAGE
+stQcfs = process_runoff(site_id,dir_runoff,st_params);
+% quit if stQcfs is empty, e.g. if no data returned from USGS website
+if ~isfield(stQcfs,'wyears')
+    display(['No Runoff Data for Site ',site_id,' ',site_name])
+    st_runoff = struct;
+    cd(dir_orig)
+    return
+end
+
+%% CONVERT TO M^3/sec
+Qm3s_cy_doy = cf2m3(stQcfs.Qcfs_cy_doy);
+Qm3s_cy_mo  = cf2m3(stQcfs.Qcfs_cy_mo);
+Qm3s_wy_dowy = cf2m3(stQcfs.Qcfs_wy_dowy);
+Qm3s_wy_mo  = cf2m3(stQcfs.Qcfs_wy_mo);
+
+%% CALCULATE RUNOFF = Q/AREA
+ws_area_m2 = st_catch.ws_area_km2 * 1e6;
+secs_per_day = 3600*24;
+R_cy_doy_mm = (Qm3s_cy_doy/ws_area_m2)*secs_per_day*1e3;
+R_wy_dowy_mm= (Qm3s_wy_dowy/ws_area_m2)*secs_per_day*1e3;
+
+% Calculate Monthly Totals
+cys = stQcfs.cyears;
+cy_mo = 1:12;
+ndays_mo_cy = daysinmonth(cy_mo,cys); % array of # days in each month
+R_cy_mo_mm  = (Qm3s_cy_mo /ws_area_m2)*(secs_per_day*1e3).*ndays_mo_cy;
+
+% Water Year Monthly Totals
+wys = stQcfs.wyears;
+wy_mo = calc_months_wy(st_params.wy_month1);
+ndays_mo_wy = daysinmonth(wy_mo,wys); % array of # days in each month of wy
+R_wy_mo_mm  = (Qm3s_wy_mo/ws_area_m2)*(secs_per_day*1e3).*ndays_mo_wy;
+
+%% MAKE RUNOFF STRUCTURE
+st.site_code = site_id;
+st.site_name = st_catch.site_name;
+st.HUC_code  = st_catch.site_parent;
+st.cal_years = stQcfs.cyears;
+st.Q_mean_daily_cy_m3s      = Qm3s_cy_doy;
+st.Q_mean_monthly_cy_m3s    = Qm3s_cy_mo;
+st.water_year_month1        = st_params.wy_month1;
+st.water_years              = stQcfs.wyears;
+st.Q_mean_daily_wy_m3s      = Qm3s_wy_dowy;
+st.Q_mean_monthly_wy_m3s    = Qm3s_wy_mo;
+st.area_km2                 = st_catch.ws_area_km2;
+st.R_daily_cy_mm       = R_cy_doy_mm;
+st.R_monthly_cy_mm     = R_cy_mo_mm;
+st.R_daily_wy_mm       = R_wy_dowy_mm;
+st.R_monthly_wy_mm     = R_wy_mo_mm;
+
+st_runoff = st;
+
+%% SAVE STRUCTURE FILE
+cd(dir_runoff)
+fname_st = ['ST_USGS_RUNOFF.mat'];
+save(fname_st, 'st_runoff');
+
+%% SAVE ANNUAL RUNOFF TEXT FILE
+
+% Annual total runoff (mm)
+R_wy_mm = nansum(R_wy_dowy_mm,2);
+% Number of data days this year
+ndays_data_wy = sum(~isnan(R_wy_dowy_mm),2);
+% Column headers
+wy_month1 = st_params.wy_month1;
+col_hdr = ['WaterYear(Month1=',num2str(wy_month1),'), TotalRunoff(mm), NDataDays'];
+data_yrs_runoff_ndays = [wys, R_wy_mm, ndays_data_wy];
+% Text file name
+fname_txt = ['RUNOFF_QGAGE_yr_R_ndays.txt'];
+% first write column headers
+dlmwrite(fname_txt,col_hdr,'');
+% then data in columns
+dlmwrite(fname_txt,data_yrs_runoff_ndays,'delimiter','\t','-append')
+
+%% SAVE MONTHLY RUNOFF TEXT FILE
+data_yr_mo_tot    = [wys, R_wy_mo_mm, R_wy_mm];
+fname_runoff_monthly = ['RUNOFF_QGAGE_yr_mo_R.txt'];
+col_hdr_mo = ['WaterYear, MonthlyRunoff(mm)[Month1=',num2str(wy_month1),'], AnnualRunoff(mm)'];
+dlmwrite(fname_runoff_monthly, col_hdr_mo,'')
+dlmwrite(fname_runoff_monthly, data_yr_mo_tot,'delimiter','\t','-append')
+
+%% PLOT DISCHARGE YEAR x DAY INTENSITY
+plot_discharge_intensity2(st_runoff, site_id)
+
+
+cd(dir_orig)
