@@ -5,7 +5,7 @@ function query_CIMIS_eto
 
 %% INITIALIZE
 url_home = 'http://goes.casil.ucdavis.edu/cimis/';   % top level address for data
-years = 2003:2012;
+years = 2010:2013;
 months_str = {'01','02','03','04','05','06','07','08','09','10','11','12'};
 
 fname_eto_gz = 'et0.asc.gz';

@@ -181,7 +181,7 @@ switch data_source
         
         if strcmp(data_type,'PRECIP');
             % Location of source data 
-            st.dir_data_source  =  '/Users/tcmoran/Desktop/2012 Catchment Analysis/_VIC Precip/2005 study';
+            st.dir_data_source  =  '/Users/tcmoran/Documents/ENV_DATA/Precipitation/VIC/2005 study';
             st.dir_data_product = [data_source,'_',data_type]; % name of subdir for PRISM data products
             st.data_units       = 'mm';
             st.data_NaN         = NaN;
