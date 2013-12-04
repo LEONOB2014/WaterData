@@ -87,9 +87,7 @@ for ii = 1:length(idx)
 		ceIN{ii,ss} = Gid{IDXin{idx(ii)}(ss)};
 	end
 end
-CatchDir_StaIn = [(Clist(idx)),ceIN];
-fname_cglist_in = 'CatchDir_GHCN_Internal_List.csv';
-path_cglist = fullfile(dir_list,fname_cglist_in);
-cell2csv(path_cglist,CatchDir_StaIn,',');
+CatchDir_StaIn = [[Clist(idx)],ceIN];
+fname_cglist_in = 'CatchDir_GHCNclosest3_List.csv';
 
 

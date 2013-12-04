@@ -6,7 +6,7 @@ function wswb_precip_daily_PRISM
 % TC Moran 2013
 
 %% INTIALIZE
-mdir = '/Users/tcmoran/Desktop/Catchment Analysis 2011/AA_CA_Catchments_Master/GAGESII_CATCHMENTS_CA/GAGESII_CATCHMENTS_219';
+mdir = WB_PARAMS('dir_master');
 
 % WS list
 flist = 'FILTERED_CATCHMENTS_219.txt';

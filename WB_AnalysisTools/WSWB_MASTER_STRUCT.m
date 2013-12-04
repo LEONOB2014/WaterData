@@ -17,6 +17,8 @@ ws_timeline = csvread(fullfile(mdir,fname_timeline),1,0);
 
 %% CYCLE THROUGH CATCHMENTS
 Nstart = 1;
+hf = figure; ha = gca; hold on, box on, xlabel('count'), ylabel('Mins to go')
+tic
 for cc = Nstart:NC
 	cpath = fullfile(mdir,Cdir{cc});
 	st = struct;
@@ -81,7 +83,10 @@ for cc = Nstart:NC
 	
 	%% FIND WS NESTED IN CURRENT WS
 	st = find_nested_ws(st);
-	Nnest(cc,1) = length(st.NestedWS.IDs);
+% 	Nnest(cc,1) = length(st.NestedWS.IDs);
+	
+	%% LIST of NEARBY GHCN STATIONS
+	st = get_ghcn_nearby(st);
 	
 	%% MODEL PARAMETERS
 	st = get_model_params_trilin(st,cpath);
@@ -94,8 +99,13 @@ for cc = Nstart:NC
 	st = get_model_output_trilin(st,P,R,wb_type);
 	
 	st_master(cc) = st;
-	display([num2str(100*cc/NC),'% done'])
+	
+	dt = toc;
+	Ttogo = progress_time(cc,NC,dt,'min',false);
+	scatter(ha,cc,Ttogo,'ro','filled')
+% 	display([num2str(100*cc/NC),'% done'])
 end
+close(hf)
 
 xx = 1;
 %% CALCULATIONS THAT REQUIRE DATA FROM MULTIPLE WATERSHEDS
@@ -246,7 +256,7 @@ st.MODELS.TriLin.output.(wb_type).Rresid = Rresid;
 st.MODELS.TriLin.output.(wb_type).CE_Rresids = CE_Rresids;
 st.MODELS.TriLin.output.(wb_type).CE_Rresids_note = '{dry, mid, wet}';
 
-function st = wswb_calc_wb_wy(st)	% CALCULATE WATER YEAR TOTALS
+function st = wswb_calc_wb_wy(st)				% CALCULATE WATER YEAR TOTALS
 wy_types = fieldnames(st.WYday1);
 Pd	= st.P.d_cy.PRISM.data;
 Pcy = st.P.d_cy.PRISM.year;
@@ -271,7 +281,7 @@ for ii = 1:length(wy_types)
 	st.WB.(wy_type).PRISM_USGS.Rwys = Rwys;
 end
 
-function st = calc_wytot(st)		% CALCULATE WY TOTALS FOR VARIOUS FLUXES
+function st = calc_wytot(st)					% CALCULATE WY TOTALS FOR VARIOUS FLUXES
 % st.(flux_type).(t_type).(flux_source).[data, year]
 t_types = {'mo_cy','d_cy'};
 wy_types = fieldnames(st.WYday1);
@@ -331,7 +341,7 @@ for ww = 1:length(wy_types)		% CYCLE THROUGH WATER YEAR TYPES
 end % ww
 xx = 1;
 
-function st = calc_Rb_recession_slope(st)	% CALCULATE Rb RECESSION SLOPE
+function st = calc_Rb_recession_slope(st)		% CALCULATE Rb RECESSION SLOPE
 dowy1_type = 'QuantMinRbDOY';
 rb = st.Rb.d_cy.USGS.data;
 wyday1 = st.WYday1.(dowy1_type).docy;
@@ -350,7 +360,7 @@ st.Rb.RecessionSlope.Nyears = st_uncert.EachYear.Nyears;
 st.Rb.RecessionSlope.type = dowy1_type;
 st.Rb.RecessionSlope.note = ['Calculated during the 30 days prior to DOWY1 type ',dowy1_type];
 
-function st = get_Rb_dowy1(st)		% GET Rb ON DOWY1 EACH VALID YEAR
+function st = get_Rb_dowy1(st)					% GET Rb ON DOWY1 EACH VALID YEAR
 dowy1 = st.WYday1.QuantMinRbDOY.docy;
 if isnan(dowy1)			% if DOWY1 not calculated due to poor baseflow data
 	dowy1 = firstdayofmonth(10,2001);
@@ -366,7 +376,7 @@ Rb_dowy1 = Rb(:,dowy1);
 st.Rb.Rb_dowy1.data = Rb_dowy1;
 st.Rb.Rb_dowy1.cyear = cyear;
 
-function st = calc_dS_yearly(st)		% ESTIMATE YEARLY dS FROM RECESSION SLOPE AND dQ
+function st = calc_dS_yearly(st)				% ESTIMATE YEARLY dS FROM RECESSION SLOPE AND dQ
 B	= st.Rb.RecessionSlope.slope;		% slope value (B = dLn(Q)/dt)
 if isnan(B)
 	st.dS.RecessionSlope.Oct1 = [];
@@ -400,7 +410,7 @@ st.dS.RecessionSlope.DOWY1 = dS_dowy1;
 % st.ID
 xx = 1;
 
-function st = find_nested_ws(st)	% MAKE LIST OF WS NESTED IN PARENT
+function st = find_nested_ws(st)				% MAKE LIST OF WS NESTED IN PARENT
 % load boundary data
 mdir = WB_PARAMS('dir_master');
 cdir = st.DIR;
@@ -519,7 +529,7 @@ if max(strcmp(dtype_short(:,nn),'R.'))>0 && max(strcmp(dtype_short(:,nn),'P.'))>
 end
 xx = 1;
 
-function st = get_p_vic_mo(st,cpath)
+function st = get_p_vic_mo(st,cpath)			% IMPORT VIC MONTHLY
 Ppath = fullfile(cpath,'GRID_VIC_CA','GRID_VIC_CA_PRECIP','GRID_DATA_WY_MONTHLY_WEIGHTED_MEAN.txt');
 PVwy = dlmread(Ppath,'\t',2,0);
 wyPV = PVwy(:,1);
@@ -563,6 +573,40 @@ saveas(hf,fullfile(cpath,'GRID_VIC_CA','GRID_VIC_CA_PRECIP','P_VIC_vs_PRISM.fig'
 saveas(hf,fullfile(cpath,'GRID_VIC_CA','GRID_VIC_CA_PRECIP','P_VIC_vs_PRISM.png'))
 close(hf)
 
+function st = get_ghcn_nearby(st)				% NEARBY GHCN STATIONS
+% first generate lists using wswb_dailyP_ghcn_proximity
+
+% 3 GHCN stations closest to centroid
+dir_ws = match_site_id_dir(st.ID);
+dir_data = '/Users/tcmoran/Documents/ENV_DATA/Precipitation/GHCN';
+path_list = fullfile(dir_data,'CatchDir_GHCNclosest3_List.csv');
+fmat = '%s %s %s %s %f %f %f';
+fid = fopen(path_list);
+ce_ghcn = textscan(fid,fmat,'delimiter',',');
+fclose(fid);
+dir_ghcn = ce_ghcn{1};
+ghcn_sta = [ce_ghcn{2:4}];
+ghcn_dist= [ce_ghcn{5:7}];
+idx_ws = find(strcmp(dir_ghcn,dir_ws));
+ghcn_sta = ghcn_sta(idx_ws,:);
+ghcn_dist= ghcn_dist(idx_ws,:);
+st.METADATA.gage_data.ghcn.closest3.sites = ghcn_sta;
+st.METADATA.gage_data.ghcn.closest3.dist = ghcn_dist;
+st.METADATA.gage_data.ghcn.closest3.info = 'Three GHCND sites closest to watershed centroid';
+
+% GHCN stations internal to watershed
+path_list = fullfile(dir_data,'CatchDir_GHCN_Internal_List.csv');
+ce_ghcn = csvimport(path_list);
+dir_ghcn = ce_ghcn(:,1);
+idx_ws = find(strcmp(dir_ghcn,dir_ws),1);
+if isempty(idx_ws)
+	st.METADATA.gage_data.ghcn.internal.sites = [];
+	return
+end
+ce_ghcn = ce_ghcn(idx_ws,2:end);
+st.METADATA.gage_data.ghcn.internal.sites = ce_ghcn(~strcmp(ce_ghcn,''));
+st.METADATA.gage_data.ghcn.internal.info = 'All GHCND sites internal to watershed boundary';
+
 function st = calc_scaled_Pvic(st)
 Pvic = st.WYtot.P.VIC.mo_cy.Oct1.data;
 Pwys = st.WYtot.P.VIC.mo_cy.Oct1.year;
@@ -572,4 +616,4 @@ st.WYtot.P.VIC_Scaled.mo_cy.Oct1.data = PvicScaled;
 st.WYtot.P.VIC_Scaled.mo_cy.Oct1.year = Pwys;
 st.WYtot.P.VIC_Scaled.mo_cy.Oct1.note = 'VIC P scaled by lin fit with yearly PRISM P';
 
-
+function st = next_function
