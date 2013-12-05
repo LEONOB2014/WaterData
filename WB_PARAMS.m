@@ -4,7 +4,7 @@ function val = WB_PARAMS(param_name)
 %% DIRECTORIES
 dir_master = '/Users/tcmoran/Desktop/Catchment Analysis 2011/AA_CA_Catchments_Master/GAGESII_CATCHMENTS_CA/GAGESII_CATCHMENTS_219';
 
-dir_ghcn = '/Users/tcmoran/Desktop/IMWW/IMWW_DATA/CLIMATE_GHCND/IMWW_DATA/ghcnd_matlab';
+dir_ghcn_data = '/Users/tcmoran/Desktop/IMWW/IMWW_DATA/CLIMATE_GHCND/IMWW_DATA/ghcnd_matlab';
 
 %% WATERSHED LIST NAMES (relative paths)
 wslist_ca219 = 'FILTERED_CATCHMENTS_219.txt';	% list of 219 CA watersheds that meet minimum criteria

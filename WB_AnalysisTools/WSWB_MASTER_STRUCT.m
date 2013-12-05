@@ -17,8 +17,8 @@ ws_timeline = csvread(fullfile(mdir,fname_timeline),1,0);
 
 %% CYCLE THROUGH CATCHMENTS
 Nstart = 1;
-hf = figure; ha = gca; hold on, box on, xlabel('count'), ylabel('Mins to go')
-tic
+% hf = figure; ha = gca; hold on, box on, xlabel('count'), ylabel('Mins to go')
+% tic
 for cc = Nstart:NC
 	cpath = fullfile(mdir,Cdir{cc});
 	st = struct;
@@ -88,6 +88,9 @@ for cc = Nstart:NC
 	%% LIST of NEARBY GHCN STATIONS
 	st = get_ghcn_nearby(st);
 	
+	%% GHCN STATION WITH BEST LINEAR FIT TO LUMPED ANNUAL PRISM
+	st = get_ghcn_best(st);
+	
 	%% MODEL PARAMETERS
 	st = get_model_params_trilin(st,cpath);
 	
@@ -100,12 +103,12 @@ for cc = Nstart:NC
 	
 	st_master(cc) = st;
 	
-	dt = toc;
-	Ttogo = progress_time(cc,NC,dt,'min',false);
-	scatter(ha,cc,Ttogo,'ro','filled')
-% 	display([num2str(100*cc/NC),'% done'])
+% 	dt = toc;
+% 	Ttogo = progress_time(cc,NC,dt,'min',true);
+% 	scatter(ha,cc,Ttogo,'ro','filled')
+	display([num2str(100*cc/NC),'% done'])
 end
-close(hf)
+% close(hf)
 
 xx = 1;
 %% CALCULATIONS THAT REQUIRE DATA FROM MULTIPLE WATERSHEDS
@@ -462,7 +465,6 @@ st_out = wswb_nested_fluxes(st_master,ID,stNested);
 
 data_types = st.NestedWS.data_types;
 nest_types = fieldnames(st_out);
-mm = 1;
 % *** SORT OUT HOW TO ASSIGN UNNESTED DATA TO STRUCTURE WITH DYNAMIC VARS
 for tt = 1:length(data_types)
 	dtype = data_types{tt};
@@ -615,5 +617,9 @@ PvicScaled = (Pvic-pfit(2))./pfit(1);
 st.WYtot.P.VIC_Scaled.mo_cy.Oct1.data = PvicScaled;
 st.WYtot.P.VIC_Scaled.mo_cy.Oct1.year = Pwys;
 st.WYtot.P.VIC_Scaled.mo_cy.Oct1.note = 'VIC P scaled by lin fit with yearly PRISM P';
+
+function st = get_ghcn_best(st)
+sg = wswb_annual_P_gage_find(st);
+st.METADATA.gage_data.ghcn.BestLinFit = sg;
 
 function st = next_function
