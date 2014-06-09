@@ -19,7 +19,7 @@ if nargin < 1
    plist = fullfile(plist,flist);
 end
 if nargin < 2
-    mdir = uigetdir;
+    mdir = WB_PARAMS('dir_master');
 end
 
 fid = fopen(plist);

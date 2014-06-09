@@ -20,4 +20,8 @@ d = d0+doy;
 % error)
 if Y ~= y, ymd = []; return, end
 
+if size(Y,1)<size(Y,2)
+	Y = Y'; M=M'; D=D';
+end
+
 ymd = [Y,M,D];
