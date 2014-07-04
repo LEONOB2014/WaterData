@@ -1,12 +1,9 @@
-function wswb_export_pGage_r(st_master,wsidx,tidx1)
+function wswb_export_pGage_r(st_ws)
 
-
-%% INITIALIZE
-if nargin < 3, tidx1 = 1; end		% default to first time index
 
 %% DIR SETUP
 mdir = '/Users/tcmoran/Desktop/Catchment Analysis 2011/AA_CA_Catchments_Master/GAGESII_CATCHMENTS_CA/GAGESII_CATCHMENTS_219';
-cdir = st_master(wsidx).DIR;
+cdir = st_ws.DIR;
 dir_fit = 'PARAM_FIT';
 DIR_FIT = fullfile(mdir,cdir,dir_fit);
 dir_ghcn = 'GAGE_PRECIP_TEMP_GHCN';
@@ -25,22 +22,19 @@ for ii=1:length(Ptypes)
 	end
 end
 dir_orig = cd(DIR_FIT);
-
-fnameG	= 'GHCN_tpr.csv';
-fnameGV = 'GHCN_VIC_p.csv';
-
+fname_tpr = 'tpr.csv';
+fname_pall = 'p_all.csv';
 
 %% ANNUAL WB DATA: RUNOFF
 % 'WB' field validated for NdaysR and Hydrol Disturb
-wb = st_master(wsidx).WB.wy.PRISM_USGS.data;
-wb = wb(tidx1:end,:);
+wb = st_ws.WB.wy.PRISM_USGS.data;
 R	= wb(:,3);
-wyR = st_master(wsidx).WB.wy.PRISM_USGS.year;
-wyR = wyR(tidx1:end);
+wyR = st_ws.WB.wy.PRISM_USGS.year;
 
 %% IMPORT GHCN GAGE DATA
 load(fullfile(DIR_GHCN,fname_ghcn))
 PG = st_pt_ghcnd.best.p.wy_tot;
+PG = round(PG);
 wyG = st_pt_ghcnd.best.p.wy;
 
 % get years common to R data
@@ -53,13 +47,16 @@ RG = R(idxR);
 
 wy_PG_R = [wyGr,PGr,RG];
 if isempty(wy_PG_R), wy_PG_R = [0,0,0];	end			% include at least one line for R import, ignore on R side
-csvwrite(fnameG,wy_PG_R)
+csvwrite(fullfile(['PDATA_','GHCN'],fname_tpr),wy_PG_R)
+
+% also save file with entire PRISM P record
+csvwrite(fullfile(['PDATA_','GHCN'],fname_pall),[wyG, PG])
 
 %% VIC P
-PV_mo	= st_master(wsidx).P.mo_cy.VIC.data;
-cyPv	= st_master(wsidx).P.mo_cy.VIC.year;
+PV_mo	= st_ws.P.mo_cy.VIC.data;
+cyPv	= st_ws.P.mo_cy.VIC.year;
 [PV_mo,wyV]= cy2wy_monthly(PV_mo,cyPv,10);			% convert to wy
-PV = sum(PV_mo,2);									% yearly total
+PV = sum(PV_mo,2);															% yearly total
 
 % get valid years for VIC data
 [ixR,idxV] = ismember(wyR,wyV);
@@ -73,16 +70,15 @@ wyVwb = wyV(idxV);
 % pg = PG(ixR);
 % plot_p_compare(pv,pg,wyVwb,figname)
 
-
 %% GHCN & VIC P PLOTS
 % common years
 [ixV,idxG] = ismember(wyV,wyG);
 idxG = idxG(idxG>0);
 wy_PG_PV = [wyV(ixV),PG(idxG),PV(ixV)];
-csvwrite(fnameGV,wy_PG_PV)
+csvwrite(fullfile('PDATA_GHCN','pg_pv.csv') ,wy_PG_PV)
 
 % PLOT VIC VS PRISM, ALL COMMON YEARS
-figname = 'VIC_vs_GHCN_ALL';
+figname = fullfile('PDATA_GHCN', 'VIC_vs_GHCN_ALL');
 pv = PV(ixV);
 pg = PG(idxG);
 plot_p_compare(pv,pg,wyV(ixV),figname)
