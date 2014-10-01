@@ -76,7 +76,7 @@ for cc = Nstart:NC
 	st = calc_wytot(st);
 	
 	%% CALCULATE SCALED VIC PRECIP
-	st = calc_scaled_Pvic(st);
+	st = wswb_P_VIC_scaledby_PRISM(st);
 	
 	%% LAND COVER: IGBP
 	st = get_lc_igbp(st,cpath);
@@ -543,38 +543,6 @@ st.P.mo_cy.VIC.data = PVcy;
 st.P.mo_cy.VIC.year = cysPV;
 st.P.mo_cy.VIC.units = 'mm monthly';
 
-% COMMONLY A LINEAR ANNUAL RELATIONSHIP BETWEEN THESE TWO
-PPcy = st.P.mo_cy.PRISM.data;
-cyPP = st.P.mo_cy.PRISM.year;
-[PPwy,wyPP] = cy2wy_monthly(PPcy,cyPP,10);
-[~,ip,iv] = intersect(wyPP,wyPV);
-PVwy = PVwy(iv,:); PVwyTot = sum(PVwy,2);
-nchk = ~isnan(PVwyTot); PVwyTot = PVwyTot(nchk);
-PPwy = PPwy(ip,:); PPwyTot = sum(PPwy,2); PPwyTot = PPwyTot(nchk);
-pfit = polyfit(PPwyTot,PVwyTot,1);
-st.P.mo_cy.VIC.WYtot_LinFit_vs_PRISM = pfit;
-
-% PLOT COMPARISON WITH PRISM
-% [~,ip,iv] = intersect(ppy,pvy);
-% pv = pv(iv,:); Pv = sum(pv,2);
-% nchk = ~isnan(Pv); Pv = Pv(nchk);
-% pp = pp(ip,:); Pp = sum(pp,2); Pp = Pp(nchk);
-hf = figure('visible','off');
-scatter(PPwyTot,PVwyTot,'filled')
-llim = max([PPwyTot;PVwyTot]);
-line([0,llim+50],[0,llim+50],'color','k','linestyle','--')
-xlabel('PRISM (mm)'), ylabel('VIC (mm)')
-line([0,llim],[polyval(pfit,0),polyval(pfit,llim)],'color','r')
-legend('data','1:1','Fit','Location','Northwest')
-title([num2str(st.ID),': Pvic = ',num2str(round(pfit(1)*100)/100),'*Pprism + ',num2str(round(pfit(2)))])
-box on
-axis image
-set(gca,'FontSize',14,'fontWeight','bold')
-set(findall(hf,'type','text'),'fontSize',14,'fontWeight','bold')
-saveas(hf,fullfile(cpath,'GRID_VIC_CA','GRID_VIC_CA_PRECIP','P_VIC_vs_PRISM.fig'))
-saveas(hf,fullfile(cpath,'GRID_VIC_CA','GRID_VIC_CA_PRECIP','P_VIC_vs_PRISM.png'))
-close(hf)
-
 function st = get_ghcn_nearby(st)				% NEARBY GHCN STATIONS
 % first generate lists using wswb_dailyP_ghcn_proximity
 
@@ -609,17 +577,20 @@ ce_ghcn = ce_ghcn(idx_ws,2:end);
 st.METADATA.gage_data.ghcn.internal.sites = ce_ghcn(~strcmp(ce_ghcn,''));
 st.METADATA.gage_data.ghcn.internal.info = 'All GHCND sites internal to watershed boundary';
 
-function st = calc_scaled_Pvic(st)
-Pvic = st.WYtot.P.VIC.mo_cy.Oct1.data;
-Pwys = st.WYtot.P.VIC.mo_cy.Oct1.year;
-pfit = st.P.mo_cy.VIC.WYtot_LinFit_vs_PRISM;
-PvicScaled = (Pvic-pfit(2))./pfit(1);
-st.WYtot.P.VIC_Scaled.mo_cy.Oct1.data = PvicScaled;
-st.WYtot.P.VIC_Scaled.mo_cy.Oct1.year = Pwys;
-st.WYtot.P.VIC_Scaled.mo_cy.Oct1.note = 'VIC P scaled by lin fit with yearly PRISM P';
+% function st = calc_scaled_Pvic(st)
+% 
+% st = wswb_P_VIC_scaledby_PRISM(st);		% calculate totals
+% Pvic = st.WYtot.P.VIC.mo_cy.Oct1.data;
+% Pwys = st.WYtot.P.VIC.mo_cy.Oct1.year;
+% pfit = st.P.mo_cy.VIC.WYtot_LinFit_vs_PRISM;
+% PvicScaled = (Pvic-pfit(2))./pfit(1);
+% st.WYtot.P.VIC_Scaled.mo_cy.Oct1.data = PvicScaled;
+% st.WYtot.P.VIC_Scaled.mo_cy.Oct1.year = Pwys;
+% st.WYtot.P.VIC_Scaled.mo_cy.Oct1.note = 'VIC P scaled by lin fit with yearly PRISM P';
 
 function st = get_ghcn_best(st)
 sg = wswb_annual_P_gage_find(st);
 st.METADATA.gage_data.ghcn.BestLinFit = sg;
+
 
 function st = next_function

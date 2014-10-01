@@ -9,6 +9,6 @@ Nws = length(st_master);
 for ii=1:Nws
 	st_ws = st_master(ii);
 	wswb_export_p_r(st_ws)				% PRISM & VIC
-	wswb_export_pGage_r(st_ws)		% GHCN gage obsv
+% 	wswb_export_pGage_r(st_ws)		% GHCN gage obsv
 	display([num2str(100*ii/Nws),'% done'])
 end

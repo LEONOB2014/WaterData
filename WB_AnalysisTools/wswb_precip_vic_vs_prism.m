@@ -1,4 +1,4 @@
-function st = wswb_P_VIC_scaledby_PRISM(st)
+function st = wswb_precip_vic_vs_prism(st)
 
 % WSWB_PRECIP_VIC_VS_PRISM(st) estimates the linear relationship of VIC ~
 % PRISM for the specified interval and returns a new or modified structure
@@ -28,25 +28,16 @@ cyPP = st.P.mo_cy.PRISM.year;
 PPwy = sum(PPwy,2);
 PPwyInt = PPwy(ismember(wyPP,WYintvl));
 
-%% LIN REGRESS: PP ~ PV
-pfit = polyfit(PVwyInt,PPwyInt,1);
-st.P.mo_cy.VIC.LinFitParams_PRISM_vs_VIC = pfit;
+%% LIN REGRESS: PV ~ PP
+pfit = polyfit(PPwyInt,PVwyInt,1);
+st.P.mo_cy.VIC.WYtot_LinFit_vs_PRISM = pfit;
 
 %% APPLY REGRESSION TO SCALE VIC
-PvicScaled = polyval(pfit,PVwy);		% PVscaled(PV) = (PV~PP)^-1
-
-st.WYtot.P.VIC_Scaled.mo_cy.Oct1.data = PvicScaled;
-st.WYtot.P.VIC_Scaled.mo_cy.Oct1.year = wyPV;
-st.WYtot.P.VIC_Scaled.mo_cy.Oct1.note = 'VIC P scaled by lin fit with yearly PRISM P, 1961-1990';
+PvicScaled = (PVwy-pfit(2))./pfit(1);		% PVscaled(PV) = (PV~PP)^-1
+st.P.wytot.Oct1.VIC_scaledby_PRISM.data = PvicScaled;
+st.P.wytot.Oct1.VIC_scaledby_PRISM.year = wyPV;
 
 % %% PLOT (OPTIONAL)
-% hf=figure;
-cla
-plot(PVwyInt, PPwyInt, 'o'); hold on
-% plot(PVwyInt, polyval(pfit,PVwyInt),'.k')
-plot(PVwy, PvicScaled, '.k')
-xlabel('VIC (mm)'); ylabel('PRISM (mm)')
-title(['PP = ',num2str(pfit(2),3),' + ',num2str(pfit(1),3),'*PV'])
-pause(0.5)
-% close(hf);
+% plot(PPwyInt, PVwyInt,'o'); hold on
+% plot(PPwyInt, polyval(pfit,PPwyInt),'.k')
 xx=1; % debug 
