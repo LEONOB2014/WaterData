@@ -1,4 +1,4 @@
-function stQcfs = process_runoff(site_id, dir_data, st_params)
+function stQcfs = process_runoff(site_id, dir_data, st_params, forceTF)
 
 % PROCESS_RUNOFF(site_id, dir_data) processes USGS runoff data and saves it
 % in directory dir_data
@@ -25,6 +25,7 @@ else
     wy_day1 = st_params.wy_day1;
     wy_month1 = st_params.wy_month1;
 end
+if nargin < 4, forceTF=false; end
 dir_orig = cd(dir_data);
 
 fnameQ = 'Qdata_USGS_web.rdb'; % filename for data retrieved from USGS website
@@ -33,7 +34,7 @@ fnameQ = 'Qdata_USGS_web.rdb'; % filename for data retrieved from USGS website
 
 % first check if file already exists
 fchk = isfilename(fnameQ,dir_data);
-if ~fchk
+if ~fchk || forceTF
     status = query_USGS_web_Q(site_id,dir_data,fnameQ);  % this saves the file 'Qdata_USGS_web.rdb' in dir_data
     if ~status % if no data retrieved from USGS website
        stQcfs = struct; 

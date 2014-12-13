@@ -28,7 +28,7 @@ dir_runoff_name = 'GAGE_RUNOFF';
 dir_runoff = fullfile(dir_catch,dir_runoff_name);
 if ~isdir(dir_runoff)
     mkdir(dir_runoff);
-elseif ~forceTF			% CHECK IF RUNOFF CALCS ALREADY DONE
+elseif ~forceTF					% CHECK IF RUNOFF CALCS ALREADY DONE
     chk_runoff_st = isfilename('ST_USGS_RUNOFF.mat',dir_runoff);
     chk_runoff_plot = isfilename('Discharge_Intensity_YearDay.fig',dir_runoff);
     if chk_runoff_st && chk_runoff_plot
@@ -45,7 +45,7 @@ site_id = st_catch.site_id;
 site_name = st_catch.site_name
 
 %% RETRIEVE DISCHARGE DATA FOR THIS USGS GAGE
-stQcfs = process_runoff(site_id,dir_runoff,st_params,forceTF);
+stQcfs = process_runoff(site_id,dir_runoff,st_params);
 % quit if stQcfs is empty, e.g. if no data returned from USGS website
 if ~isfield(stQcfs,'wyears')
     display(['No Runoff Data for Site ',site_id,' ',site_name])

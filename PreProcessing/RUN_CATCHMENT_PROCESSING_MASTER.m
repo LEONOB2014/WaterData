@@ -1,6 +1,6 @@
 function RUN_CATCHMENT_PROCESSING_MASTER(dir_master, catchment_list_master,st_params)
 
-% RUN_WS_ANALYSIS_MASTER(dir_master, catchment_list_master) executes
+% RUN_CATCHMENT_PROCESSING_MASTER(dir_master, catchment_list_master,st_params) executes
 % watershed water balance analysis.
 %
 % INPUTS
